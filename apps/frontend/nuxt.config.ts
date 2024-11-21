@@ -1,14 +1,14 @@
 import { promises as fs } from "fs";
 import { pathToFileURL } from "node:url";
 import svgLoader from "vite-svg-loader";
-import { resolve, basename, relative } from "pathe";
+import { basename, relative, resolve } from "pathe";
 import { defineNuxtConfig } from "nuxt/config";
 import { $fetch } from "ofetch";
 import { globIterate } from "glob";
 import { match as matchLocale } from "@formatjs/intl-localematcher";
 import { consola } from "consola";
 
-const STAGING_API_URL = "https://staging-api.modrinth.com/v2/";
+const STAGING_API_URL = "https://api.modrinth.com/v2/";
 
 const preloadedFonts = [
   "inter/Inter-Regular.woff2",
@@ -34,7 +34,9 @@ const enabledLocales: string[] = [];
 /**
  * Overrides for the categories of the certain locales.
  */
-const localesCategoriesOverrides: Partial<Record<string, "fun" | "experimental">> = {
+const localesCategoriesOverrides: Partial<
+  Record<string, "fun" | "experimental">
+> = {
   "en-x-pirate": "fun",
   "en-x-updown": "fun",
   "en-x-lolcat": "fun",
@@ -68,7 +70,13 @@ export default defineNuxtConfig({
           return { rel: "icon", type: "image/x-icon", href, media };
         }),
         ...Object.entries(favicons).map(([media, href]): object => {
-          return { rel: "apple-touch-icon", type: "image/x-icon", href, media, sizes: "64x64" };
+          return {
+            rel: "apple-touch-icon",
+            type: "image/x-icon",
+            href,
+            media,
+            sizes: "64x64",
+          };
         }),
         {
           rel: "search",
@@ -129,7 +137,9 @@ export default defineNuxtConfig({
       } = {};
 
       try {
-        state = JSON.parse(await fs.readFile("./src/generated/state.json", "utf8"));
+        state = JSON.parse(
+          await fs.readFile("./src/generated/state.json", "utf8"),
+        );
       } catch {
         // File doesn't exist, create folder
         await fs.mkdir("./src/generated", { recursive: true });
@@ -176,7 +186,10 @@ export default defineNuxtConfig({
         $fetch(`${API_URL}projects_random?count=60`, headers),
         $fetch(`${API_URL}search?limit=3&query=leave&index=relevance`, headers),
         $fetch(`${API_URL}search?limit=3&query=&index=updated`, headers),
-        $fetch(`${API_URL.replace("/v2/", "/_internal/")}billing/products`, headers),
+        $fetch(
+          `${API_URL.replace("/v2/", "/_internal/")}billing/products`,
+          headers,
+        ),
       ]);
 
       state.categories = categories;
@@ -199,7 +212,14 @@ export default defineNuxtConfig({
         1,
       );
 
-      const types = ["mods", "modpacks", "plugins", "resourcepacks", "shaders", "datapacks"];
+      const types = [
+        "mods",
+        "modpacks",
+        "plugins",
+        "resourcepacks",
+        "shaders",
+        "datapacks",
+      ];
 
       types.forEach((type) =>
         routes.push({
@@ -207,7 +227,7 @@ export default defineNuxtConfig({
           path: `/${type}`,
           file: resolve(__dirname, "src/pages/search/[searchProjectType].vue"),
           children: [],
-        }),
+        })
       );
     },
     async "vintl:extendOptions"(opts) {
@@ -218,16 +238,22 @@ export default defineNuxtConfig({
       const resolveCompactNumberDataImport = await (async () => {
         const compactNumberLocales: string[] = [];
 
-        for await (const localeFile of globIterate(
-          "node_modules/@vintl/compact-number/dist/locale-data/*.mjs",
-          { ignore: "**/*.data.mjs" },
-        )) {
+        for await (
+          const localeFile of globIterate(
+            "node_modules/@vintl/compact-number/dist/locale-data/*.mjs",
+            { ignore: "**/*.data.mjs" },
+          )
+        ) {
           const tag = basename(localeFile, ".mjs");
           compactNumberLocales.push(tag);
         }
 
         function resolveImport(tag: string) {
-          const matchedTag = matchLocale([tag], compactNumberLocales, "en-x-placeholder");
+          const matchedTag = matchLocale(
+            [tag],
+            compactNumberLocales,
+            "en-x-placeholder",
+          );
           return matchedTag === "en-x-placeholder"
             ? undefined
             : `@vintl/compact-number/locale-data/${matchedTag}`;
@@ -238,11 +264,19 @@ export default defineNuxtConfig({
 
       const resolveOmorphiaLocaleImport = await (async () => {
         const omorphiaLocales: string[] = [];
-        const omorphiaLocaleSets = new Map<string, { files: { from: string }[] }>();
+        const omorphiaLocaleSets = new Map<
+          string,
+          { files: { from: string }[] }
+        >();
 
-        for await (const localeDir of globIterate("node_modules/@modrinth/ui/src/locales/*", {
-          posix: true,
-        })) {
+        for await (
+          const localeDir of globIterate(
+            "node_modules/@modrinth/ui/src/locales/*",
+            {
+              posix: true,
+            },
+          )
+        ) {
           const tag = basename(localeDir);
           omorphiaLocales.push(tag);
 
@@ -250,7 +284,9 @@ export default defineNuxtConfig({
 
           omorphiaLocaleSets.set(tag, { files: localeFiles });
 
-          for await (const localeFile of globIterate(`${localeDir}/*`, { posix: true })) {
+          for await (
+            const localeFile of globIterate(`${localeDir}/*`, { posix: true })
+          ) {
             localeFiles.push({
               from: pathToFileURL(localeFile).toString(),
               format: "default",
@@ -259,21 +295,29 @@ export default defineNuxtConfig({
         }
 
         return function resolveLocaleImport(tag: string) {
-          return omorphiaLocaleSets.get(matchLocale([tag], omorphiaLocales, "en-x-placeholder"));
+          return omorphiaLocaleSets.get(
+            matchLocale([tag], omorphiaLocales, "en-x-placeholder"),
+          );
         };
       })();
 
-      for await (const localeDir of globIterate("src/locales/*/", { posix: true })) {
+      for await (
+        const localeDir of globIterate("src/locales/*/", { posix: true })
+      ) {
         const tag = basename(localeDir);
-        if (isProduction && !enabledLocales.includes(tag) && opts.defaultLocale !== tag) continue;
+        if (
+          isProduction && !enabledLocales.includes(tag) &&
+          opts.defaultLocale !== tag
+        ) continue;
 
-        const locale =
-          opts.locales.find((locale) => locale.tag === tag) ??
+        const locale = opts.locales.find((locale) => locale.tag === tag) ??
           opts.locales[opts.locales.push({ tag }) - 1]!;
 
         const localeFiles = (locale.files ??= []);
 
-        for await (const localeFile of globIterate(`${localeDir}/*`, { posix: true })) {
+        for await (
+          const localeFile of globIterate(`${localeDir}/*`, { posix: true })
+        ) {
           const fileName = basename(localeFile);
           if (fileName === "index.json") {
             localeFiles.push({
@@ -291,7 +335,9 @@ export default defineNuxtConfig({
               localeMeta[key] = value.message;
             }
           } else {
-            (locale.resources ??= {})[fileName] = `./${relative("./src", localeFile)}`;
+            (locale.resources ??= {})[fileName] = `./${
+              relative("./src", localeFile)
+            }`;
           }
         }
 
@@ -319,7 +365,8 @@ export default defineNuxtConfig({
     // @ts-ignore
     apiBaseUrl: process.env.BASE_URL ?? globalThis.BASE_URL ?? getApiUrl(),
     // @ts-ignore
-    rateLimitKey: process.env.RATE_LIMIT_IGNORE_KEY ?? globalThis.RATE_LIMIT_IGNORE_KEY,
+    rateLimitKey: process.env.RATE_LIMIT_IGNORE_KEY ??
+      globalThis.RATE_LIMIT_IGNORE_KEY,
     pyroBaseUrl: process.env.PYRO_BASE_URL,
     public: {
       apiBaseUrl: getApiUrl(),
@@ -330,21 +377,18 @@ export default defineNuxtConfig({
 
       owner: process.env.VERCEL_GIT_REPO_OWNER || "modrinth",
       slug: process.env.VERCEL_GIT_REPO_SLUG || "code",
-      branch:
-        process.env.VERCEL_GIT_COMMIT_REF ||
+      branch: process.env.VERCEL_GIT_COMMIT_REF ||
         process.env.CF_PAGES_BRANCH ||
         // @ts-ignore
         globalThis.CF_PAGES_BRANCH ||
         "master",
-      hash:
-        process.env.VERCEL_GIT_COMMIT_SHA ||
+      hash: process.env.VERCEL_GIT_COMMIT_SHA ||
         process.env.CF_PAGES_COMMIT_SHA ||
         // @ts-ignore
         globalThis.CF_PAGES_COMMIT_SHA ||
         "unknown",
 
-      stripePublishableKey:
-        process.env.STRIPE_PUBLISHABLE_KEY ||
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ||
         globalThis.STRIPE_PUBLISHABLE_KEY ||
         "pk_test_51JbFxJJygY5LJFfKV50mnXzz3YLvBVe2Gd1jn7ljWAkaBlRz3VQdxN9mXcPSrFbSqxwAb0svte9yhnsmm7qHfcWn00R611Ce7b",
     },
@@ -378,12 +422,17 @@ export default defineNuxtConfig({
     seo: {
       defaultLocaleHasParameter: false,
     },
-    onParseError({ error, message, messageId, moduleId, parseMessage, parserOptions }) {
+    onParseError(
+      { error, message, messageId, moduleId, parseMessage, parserOptions },
+    ) {
       const errorMessage = String(error);
       const modulePath = relative(__dirname, moduleId);
 
       try {
-        const fallback = parseMessage(message, { ...parserOptions, ignoreTag: true });
+        const fallback = parseMessage(message, {
+          ...parserOptions,
+          ignoreTag: true,
+        });
 
         consola.warn(
           `[i18n] ${messageId} in ${modulePath} cannot be parsed normally due to ${errorMessage}. The tags will will not be parsed.`,
@@ -393,10 +442,9 @@ export default defineNuxtConfig({
       } catch (err) {
         const secondaryErrorMessage = String(err);
 
-        const reason =
-          errorMessage === secondaryErrorMessage
-            ? errorMessage
-            : `${errorMessage} and ${secondaryErrorMessage}`;
+        const reason = errorMessage === secondaryErrorMessage
+          ? errorMessage
+          : `${errorMessage} and ${secondaryErrorMessage}`;
 
         consola.warn(
           `[i18n] ${messageId} in ${modulePath} cannot be parsed due to ${reason}. It will be skipped.`,
@@ -431,7 +479,8 @@ export default defineNuxtConfig({
 
 function getApiUrl() {
   // @ts-ignore
-  return process.env.BROWSER_BASE_URL ?? globalThis.BROWSER_BASE_URL ?? STAGING_API_URL;
+  return process.env.BROWSER_BASE_URL ?? globalThis.BROWSER_BASE_URL ??
+    STAGING_API_URL;
 }
 
 function isProduction() {
@@ -446,8 +495,7 @@ function getDomain() {
   if (process.env.NODE_ENV === "production") {
     if (process.env.SITE_URL) {
       return process.env.SITE_URL;
-    }
-    // @ts-ignore
+    } // @ts-ignore
     else if (process.env.CF_PAGES_URL || globalThis.CF_PAGES_URL) {
       // @ts-ignore
       return process.env.CF_PAGES_URL ?? globalThis.CF_PAGES_URL;
