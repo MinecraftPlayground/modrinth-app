@@ -1,76 +1,80 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
-import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
-import {
-  HomeIcon,
-  SearchIcon,
-  LibraryIcon,
-  PlusIcon,
-  SettingsIcon,
-  XIcon,
-  DownloadIcon,
-} from '@modrinth/assets'
-import { Button, Notifications } from '@modrinth/ui'
-import { useLoading, useTheming } from '@/store/state'
-import AccountsCard from '@/components/ui/AccountsCard.vue'
-import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue'
-import { get } from '@/helpers/settings'
-import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
-import RunningAppBar from '@/components/ui/RunningAppBar.vue'
-import SplashScreen from '@/components/ui/SplashScreen.vue'
-import ErrorModal from '@/components/ui/ErrorModal.vue'
-import ModrinthLoadingIndicator from '@/components/modrinth-loading-indicator'
-import { handleError, useNotifications } from '@/store/notifications.js'
-import { command_listener, warning_listener } from '@/helpers/events.js'
-import { MinimizeIcon, MaximizeIcon } from '@/assets/icons'
-import { type } from '@tauri-apps/plugin-os'
-import { isDev, getOS, restartApp } from '@/helpers/utils.js'
-import { initAnalytics, debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
-import { getCurrentWindow } from '@tauri-apps/api/window'
-import { getVersion } from '@tauri-apps/api/app'
-import URLConfirmModal from '@/components/ui/URLConfirmModal.vue'
-import { install_from_file } from './helpers/pack'
-import { useError } from '@/store/error.js'
-import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
-import ModInstallModal from '@/components/ui/install_flow/ModInstallModal.vue'
-import IncompatibilityWarningModal from '@/components/ui/install_flow/IncompatibilityWarningModal.vue'
-import InstallConfirmModal from '@/components/ui/install_flow/InstallConfirmModal.vue'
-import { useInstall } from '@/store/install.js'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-shell'
-import { get_opening_command, initialize_state } from '@/helpers/state'
-import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
-import { renderString } from '@modrinth/utils'
-import { useFetch } from '@/helpers/fetch.js'
-import { check } from '@tauri-apps/plugin-updater'
+import { computed, ref, onMounted } from 'vue';
+import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router';
+import
+  {
+    HomeIcon,
+    SearchIcon,
+    LibraryIcon,
+    PlusIcon,
+    SettingsIcon,
+    XIcon,
+    DownloadIcon,
+  } from '@modrinth/assets';
+import { Button, Notifications } from '@modrinth/ui';
+import { useLoading, useTheming } from '@/store/state';
+import AccountsCard from '@/components/ui/AccountsCard.vue';
+import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue';
+import { get } from '@/helpers/settings';
+import Breadcrumbs from '@/components/ui/Breadcrumbs.vue';
+import RunningAppBar from '@/components/ui/RunningAppBar.vue';
+import SplashScreen from '@/components/ui/SplashScreen.vue';
+import ErrorModal from '@/components/ui/ErrorModal.vue';
+import ModrinthLoadingIndicator from '@/components/modrinth-loading-indicator';
+import { handleError, useNotifications } from '@/store/notifications.js';
+import { command_listener, warning_listener } from '@/helpers/events.js';
+import { MinimizeIcon, MaximizeIcon } from '@/assets/icons';
+import { type } from '@tauri-apps/plugin-os';
+import { isDev, getOS, restartApp } from '@/helpers/utils.js';
+import { initAnalytics, debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getVersion } from '@tauri-apps/api/app';
+import URLConfirmModal from '@/components/ui/URLConfirmModal.vue';
+import { install_from_file } from './helpers/pack';
+import { useError } from '@/store/error.js';
+import { useCheckDisableMouseover } from '@/composables/macCssFix.js';
+import ModInstallModal from '@/components/ui/install_flow/ModInstallModal.vue';
+import IncompatibilityWarningModal from '@/components/ui/install_flow/IncompatibilityWarningModal.vue';
+import InstallConfirmModal from '@/components/ui/install_flow/InstallConfirmModal.vue';
+import { useInstall } from '@/store/install.js';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-shell';
+import { get_opening_command, initialize_state } from '@/helpers/state';
+import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
+import { renderString } from '@modrinth/utils';
+import { useFetch } from '@/helpers/fetch.js';
 
-const themeStore = useTheming()
+const themeStore = useTheming();
 
-const urlModal = ref(null)
+const urlModal = ref(null);
 
-const offline = ref(!navigator.onLine)
-window.addEventListener('offline', () => {
-  offline.value = true
-})
-window.addEventListener('online', () => {
-  offline.value = false
-})
+const offline = ref(!navigator.onLine);
+window.addEventListener('offline', () =>
+{
+  offline.value = true;
+});
+window.addEventListener('online', () =>
+{
+  offline.value = false;
+});
 
-const showOnboarding = ref(false)
-const nativeDecorations = ref(false)
+const showOnboarding = ref(false);
+const nativeDecorations = ref(false);
 
-const os = ref('')
+const os = ref('');
 
-const stateInitialized = ref(false)
+const stateInitialized = ref(false);
 
-const criticalErrorMessage = ref()
+const criticalErrorMessage = ref();
 
-onMounted(async () => {
-  await useCheckDisableMouseover()
-})
+onMounted(async () =>
+{
+  await useCheckDisableMouseover();
+});
 
-async function setupApp() {
-  stateInitialized.value = true
+async function setupApp ()
+{
+  stateInitialized.value = true;
   const {
     native_decorations,
     theme,
@@ -79,38 +83,38 @@ async function setupApp() {
     advanced_rendering,
     onboarded,
     default_page,
-  } = await get()
+  } = await get();
 
   if (default_page && default_page !== 'Home') {
-    await router.push({ name: default_page })
+    await router.push({ name: default_page });
   }
 
-  os.value = await getOS()
-  const dev = await isDev()
-  const version = await getVersion()
-  showOnboarding.value = !onboarded
+  os.value = await getOS();
+  const dev = await isDev();
+  const version = await getVersion();
+  showOnboarding.value = !onboarded;
 
-  nativeDecorations.value = native_decorations
-  if (os.value !== 'MacOS') await getCurrentWindow().setDecorations(native_decorations)
+  nativeDecorations.value = native_decorations;
+  if (os.value !== 'MacOS') await getCurrentWindow().setDecorations(native_decorations);
 
-  themeStore.setThemeState(theme)
-  themeStore.collapsedNavigation = collapsed_navigation
-  themeStore.advancedRendering = advanced_rendering
+  themeStore.setThemeState(theme);
+  themeStore.collapsedNavigation = collapsed_navigation;
+  themeStore.advancedRendering = advanced_rendering;
 
-  initAnalytics()
+  initAnalytics();
   if (!telemetry) {
-    optOutAnalytics()
+    optOutAnalytics();
   }
-  if (dev) debugAnalytics()
-  trackEvent('Launched', { version, dev, onboarded })
+  if (dev) debugAnalytics();
+  trackEvent('Launched', { version, dev, onboarded });
 
-  if (!dev) document.addEventListener('contextmenu', (event) => event.preventDefault())
+  if (!dev) document.addEventListener('contextmenu', (event) => event.preventDefault());
 
-  const osType = await type()
+  const osType = await type();
   if (osType === 'macos') {
-    document.getElementsByTagName('html')[0].classList.add('mac')
+    document.getElementsByTagName('html')[ 0 ].classList.add('mac');
   } else {
-    document.getElementsByTagName('html')[0].classList.add('windows')
+    document.getElementsByTagName('html')[ 0 ].classList.add('windows');
   }
 
   await warning_listener((e) =>
@@ -119,143 +123,140 @@ async function setupApp() {
       text: e.message,
       type: 'warn',
     }),
-  )
+  );
 
   useFetch(
     `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
     'criticalAnnouncements',
     true,
-  ).then((res) => {
+  ).then((res) =>
+  {
     if (res && res.header && res.body) {
-      criticalErrorMessage.value = res
+      criticalErrorMessage.value = res;
     }
-  })
+  });
 
-  get_opening_command().then(handleCommand)
-  checkUpdates()
+  get_opening_command().then(handleCommand);
 }
 
-const stateFailed = ref(false)
+const stateFailed = ref(false);
 initialize_state()
-  .then(() => {
-    setupApp().catch((err) => {
-      stateFailed.value = true
-      console.error(err)
-      error.showError(err, null, false, 'state_init')
-    })
+  .then(() =>
+  {
+    setupApp().catch((err) =>
+    {
+      stateFailed.value = true;
+      console.error(err);
+      error.showError(err, null, false, 'state_init');
+    });
   })
-  .catch((err) => {
-    stateFailed.value = true
-    console.error('Failed to initialize app', err)
-    error.showError(err, null, false, 'state_init')
-  })
+  .catch((err) =>
+  {
+    stateFailed.value = true;
+    console.error('Failed to initialize app', err);
+    error.showError(err, null, false, 'state_init');
+  });
 
-const handleClose = async () => {
-  await saveWindowState(StateFlags.ALL)
-  await getCurrentWindow().close()
-}
+const handleClose = async () =>
+{
+  await saveWindowState(StateFlags.ALL);
+  await getCurrentWindow().close();
+};
 
-const router = useRouter()
-router.afterEach((to, from, failure) => {
-  trackEvent('PageView', { path: to.path, fromPath: from.path, failed: failure })
-})
-const route = useRoute()
-const isOnBrowse = computed(() => route.path.startsWith('/browse'))
+const router = useRouter();
+router.afterEach((to, from, failure) =>
+{
+  trackEvent('PageView', { path: to.path, fromPath: from.path, failed: failure });
+});
+const route = useRoute();
+const isOnBrowse = computed(() => route.path.startsWith('/browse'));
 
-const loading = useLoading()
-loading.setEnabled(false)
+const loading = useLoading();
+loading.setEnabled(false);
 
-const notifications = useNotifications()
-const notificationsWrapper = ref()
+const notifications = useNotifications();
+const notificationsWrapper = ref();
 
-const error = useError()
-const errorModal = ref()
+const error = useError();
+const errorModal = ref();
 
-const install = useInstall()
-const modInstallModal = ref()
-const installConfirmModal = ref()
-const incompatibilityWarningModal = ref()
+const install = useInstall();
+const modInstallModal = ref();
+const installConfirmModal = ref();
+const incompatibilityWarningModal = ref();
 
-onMounted(() => {
-  invoke('show_window')
+onMounted(() =>
+{
+  invoke('show_window');
 
-  notifications.setNotifs(notificationsWrapper.value)
+  notifications.setNotifs(notificationsWrapper.value);
 
-  error.setErrorModal(errorModal.value)
+  error.setErrorModal(errorModal.value);
 
-  install.setIncompatibilityWarningModal(incompatibilityWarningModal)
-  install.setInstallConfirmModal(installConfirmModal)
-  install.setModInstallModal(modInstallModal)
-})
+  install.setIncompatibilityWarningModal(incompatibilityWarningModal);
+  install.setInstallConfirmModal(installConfirmModal);
+  install.setModInstallModal(modInstallModal);
+});
 
-document.querySelector('body').addEventListener('click', function (e) {
-  let target = e.target
+document.querySelector('body').addEventListener('click', function (e)
+{
+  let target = e.target;
   while (target != null) {
     if (target.matches('a')) {
       if (
         target.href &&
-        ['http://', 'https://', 'mailto:', 'tel:'].some((v) => target.href.startsWith(v)) &&
+        [ 'http://', 'https://', 'mailto:', 'tel:' ].some((v) => target.href.startsWith(v)) &&
         !target.classList.contains('router-link-active') &&
         !target.href.startsWith('http://localhost') &&
         !target.href.startsWith('https://tauri.localhost') &&
         !target.href.startsWith('http://tauri.localhost')
       ) {
-        open(target.href)
+        open(target.href);
       }
-      e.preventDefault()
-      break
+      e.preventDefault();
+      break;
     }
-    target = target.parentElement
+    target = target.parentElement;
   }
-})
+});
 
-document.querySelector('body').addEventListener('auxclick', function (e) {
+document.querySelector('body').addEventListener('auxclick', function (e)
+{
   // disables middle click -> new tab
   if (e.button === 1) {
-    e.preventDefault()
+    e.preventDefault();
     // instead do a left click
     const event = new MouseEvent('click', {
       view: window,
       bubbles: true,
       cancelable: true,
-    })
-    e.target.dispatchEvent(event)
+    });
+    e.target.dispatchEvent(event);
   }
-})
+});
 
-const accounts = ref(null)
+const accounts = ref(null);
 
-command_listener(handleCommand)
-async function handleCommand(e) {
-  if (!e) return
+command_listener(handleCommand);
+async function handleCommand (e)
+{
+  if (!e) return;
 
   if (e.event === 'RunMRPack') {
     // RunMRPack should directly install a local mrpack given a path
     if (e.path.endsWith('.mrpack')) {
-      await install_from_file(e.path).catch(handleError)
+      await install_from_file(e.path).catch(handleError);
       trackEvent('InstanceCreate', {
         source: 'CreationModalFileDrop',
-      })
+      });
     }
   } else {
     // Other commands are URL-based (deep linking)
-    urlModal.value.show(e)
+    urlModal.value.show(e);
   }
 }
 
-const updateAvailable = ref(false)
-async function checkUpdates() {
-  const update = await check()
-  console.log(update)
-  updateAvailable.value = !!update
-
-  setTimeout(
-    () => {
-      checkUpdates()
-    },
-    5 * 1000 * 60,
-  )
-}
+const updateAvailable = ref(false);
 </script>
 
 <template>
@@ -270,14 +271,9 @@ async function checkUpdates() {
           <RouterLink v-tooltip="'Home'" to="/" class="btn icon-only collapsed-button">
             <HomeIcon />
           </RouterLink>
-          <RouterLink
-            v-tooltip="'Browse'"
-            to="/browse/modpack"
-            class="btn icon-only collapsed-button"
-            :class="{
-              'router-link-active': isOnBrowse,
-            }"
-          >
+          <RouterLink v-tooltip="'Browse'" to="/browse/modpack" class="btn icon-only collapsed-button" :class="{
+            'router-link-active': isOnBrowse,
+          }">
             <SearchIcon />
           </RouterLink>
           <RouterLink v-tooltip="'Library'" to="/library" class="btn icon-only collapsed-button">
@@ -289,21 +285,12 @@ async function checkUpdates() {
         </div>
       </div>
       <div class="settings pages-list">
-        <button
-          v-if="updateAvailable"
-          v-tooltip="'Install update'"
-          class="btn btn-outline btn-primary icon-only collapsed-button"
-          @click="restartApp()"
-        >
+        <button v-if="updateAvailable" v-tooltip="'Install update'"
+          class="btn btn-outline btn-primary icon-only collapsed-button" @click="restartApp()">
           <DownloadIcon />
         </button>
-        <Button
-          v-tooltip="'Create profile'"
-          class="sleek-primary collapsed-button"
-          icon-only
-          :disabled="offline"
-          @click="() => $refs.installationModal.show()"
-        >
+        <Button v-tooltip="'Create profile'" class="sleek-primary collapsed-button" icon-only :disabled="offline"
+          @click="() => $refs.installationModal.show()">
           <PlusIcon />
         </Button>
         <RouterLink v-tooltip="'Settings'" to="/settings" class="btn icon-only collapsed-button">
@@ -331,11 +318,7 @@ async function checkUpdates() {
           <Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
             <MinimizeIcon />
           </Button>
-          <Button
-            class="titlebar-button"
-            icon-only
-            @click="() => getCurrentWindow().toggleMaximize()"
-          >
+          <Button class="titlebar-button" icon-only @click="() => getCurrentWindow().toggleMaximize()">
             <MaximizeIcon />
           </Button>
           <Button class="titlebar-button close" icon-only @click="handleClose">
@@ -344,10 +327,7 @@ async function checkUpdates() {
         </section>
       </div>
       <div class="router-view">
-        <ModrinthLoadingIndicator
-          offset-height="var(--appbar-height)"
-          offset-width="var(--sidebar-width)"
-        />
+        <ModrinthLoadingIndicator offset-height="var(--appbar-height)" offset-width="var(--sidebar-width)" />
         <RouterView v-slot="{ Component }">
           <template v-if="Component">
             <Suspense @pending="loading.startLoading()" @resolve="loading.stopLoading()">
@@ -400,6 +380,7 @@ async function checkUpdates() {
     height: 3.25rem;
 
     &.close {
+
       &:hover,
       &:active {
         background-color: var(--color-red);
