@@ -125,17 +125,6 @@ async function setupApp ()
     }),
   );
 
-  useFetch(
-    `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
-    'criticalAnnouncements',
-    true,
-  ).then((res) =>
-  {
-    if (res && res.header && res.body) {
-      criticalErrorMessage.value = res;
-    }
-  });
-
   get_opening_command().then(handleCommand);
 }
 
